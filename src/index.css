@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+/* Brand Colors - Modern Purple/Indigo Theme */
+:root {
+  --brand-primary: #6366F1;      /* Indigo-500 - Main accent */
+  --brand-primary-dark: #4F46E5; /* Indigo-600 */
+  --brand-dark: #0F172A;         /* Slate-900 - Dark backgrounds */
+  --brand-dark-light: #1E293B;   /* Slate-800 */
+  --brand-dark-lighter: #334155; /* Slate-700 */
+  --brand-light: #F8FAFC;        /* Slate-50 - Light backgrounds */
+  --brand-light-dark: #E2E8F0;   /* Slate-200 */
+  --brand-accent: #8B5CF6;       /* Violet-500 */
+  --brand-cyan: #06B6D4;         /* Cyan-500 */
+  
+  /* Legacy mappings for compatibility */
+  --brand-cream: #E2E8F0;
+  --brand-cream-light: #F8FAFC;
+  --brand-cream-dark: #CBD5E1;
+  
+  font-family: 'Google Sans', 'Google Sans Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--brand-cream-light);
+  color: var(--brand-dark);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--brand-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brand-dark-lighter);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-dark);
+}
+
+/* Custom utilities */
+.text-brand-dark {
+  color: var(--brand-dark);
+}
+
+.bg-brand-dark {
+  background-color: var(--brand-dark);
+}
+
+.bg-brand-cream {
+  background-color: var(--brand-cream);
+}
+
+.border-brand-cream {
+  border-color: var(--brand-cream);
+}
+
+/* Responsive text sizes */
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Print Styles for A5 Invoice */
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 0;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-container,
+  .print-container * {
+    visibility: visible;
+  }
+  
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  .print-invoice {
+    width: 148mm !important;
+    min-height: 210mm !important;
+    padding: 10mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

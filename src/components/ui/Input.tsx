@@ -1,0 +1,35 @@
+import React from 'react';
+import clsx from 'clsx';
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    label?: string;
+    error?: string;
+}
+
+const Input: React.FC<InputProps> = ({ label, error, className, id, ...props }) => {
+    return (
+        <div className="mb-3 sm:mb-4">
+            {label && (
+                <label htmlFor={id} className="block text-xs sm:text-sm font-medium mb-1.5" style={{ color: '#334155' }}>
+                    {label}
+                </label>
+            )}
+            <input
+                id={id}
+                className={clsx(
+                    "block w-full rounded-lg shadow-sm text-sm p-2.5 sm:p-3 border transition-all duration-200",
+                    "focus:outline-none focus:ring-2 focus:ring-offset-1",
+                    error 
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-200" 
+                        : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-200",
+                    className
+                )}
+                style={{ backgroundColor: '#FFFFFF', color: '#0F172A' }}
+                {...props}
+            />
+            {error && <p className="mt-1.5 text-xs sm:text-sm text-red-600">{error}</p>}
+        </div>
+    );
+};
+
+export default Input;
