@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { FaLock, FaEnvelope, FaSprayCan } from 'react-icons/fa';

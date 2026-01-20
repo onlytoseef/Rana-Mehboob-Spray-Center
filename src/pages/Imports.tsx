@@ -42,6 +42,8 @@ interface ImportItem {
     quantity: number;
     unit_price: number;
     total_price: number;
+    batch_number?: string;
+    expiry_date?: string;
 }
 
 const Imports = () => {
@@ -80,6 +82,8 @@ const Imports = () => {
         product_id: '',
         quantity: 0,
         unit_price: 0,
+        batch_number: '',
+        expiry_date: '',
     });
 
     const fetchInvoices = async () => {
@@ -207,13 +211,17 @@ const Imports = () => {
             toast.error('Unit price cannot be negative');
             return;
         }
+        if (!itemFormData.batch_number.trim()) {
+            toast.error('Please enter batch number');
+            return;
+        }
 
         setLoading(true);
         try {
             await api.post(`/imports/${selectedInvoice.id}/items`, itemFormData);
             toast.success('Item added to invoice successfully!');
             setIsItemModalOpen(false);
-            setItemFormData({ product_id: '', quantity: 0, unit_price: 0 });
+            setItemFormData({ product_id: '', quantity: 0, unit_price: 0, batch_number: '', expiry_date: '' });
             fetchInvoiceDetails(selectedInvoice.id);
             fetchInvoices();
         } catch (err: any) {
@@ -338,6 +346,8 @@ const Imports = () => {
 
     const itemColumns = [
         { header: 'Product', accessor: 'product_name' as keyof ImportItem },
+        { header: 'Batch #', accessor: 'batch_number' as keyof ImportItem },
+        { header: 'Expiry', accessor: (item: ImportItem) => item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '-' },
         { header: 'Quantity', accessor: 'quantity' as keyof ImportItem },
         { header: 'Unit Price', accessor: 'unit_price' as keyof ImportItem },
         { header: 'Total', accessor: 'total_price' as keyof ImportItem },
@@ -576,6 +586,26 @@ const Imports = () => {
                         value={itemFormData.product_id}
                         onChange={(v) => setItemFormData({ ...itemFormData, product_id: v })}
                     />
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Batch Number *</label>
+                        <input
+                            type="text"
+                            value={itemFormData.batch_number}
+                            onChange={(e) => setItemFormData({ ...itemFormData, batch_number: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            placeholder="Enter batch number"
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                        <input
+                            type="date"
+                            value={itemFormData.expiry_date}
+                            onChange={(e) => setItemFormData({ ...itemFormData, expiry_date: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
                     <NumberInput
                         label="Quantity"
                         value={itemFormData.quantity}

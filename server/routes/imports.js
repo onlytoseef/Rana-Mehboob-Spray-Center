@@ -55,9 +55,11 @@ router.get("/:id", authorization, async (req, res) => {
     `, [id]);
     
     const items = await pool.query(`
-      SELECT ii.*, p.name as product_name 
+      SELECT ii.*, p.name as product_name,
+             pb.batch_number, pb.expiry_date
       FROM import_items ii 
       LEFT JOIN products p ON ii.product_id = p.id 
+      LEFT JOIN product_batches pb ON ii.batch_id = pb.batch_id
       WHERE ii.import_invoice_id = $1
     `, [id]);
     
@@ -72,7 +74,7 @@ router.get("/:id", authorization, async (req, res) => {
 router.post("/:id/items", authorization, async (req, res) => {
   try {
     const { id } = req.params;
-    const { product_id, quantity, unit_price } = req.body;
+    const { product_id, quantity, unit_price, batch_number, expiry_date } = req.body;
     const total_price = quantity * unit_price;
     
     // Check if invoice is draft
@@ -81,9 +83,28 @@ router.post("/:id/items", authorization, async (req, res) => {
       return res.status(400).json("Cannot modify finalized invoice");
     }
     
+    // Create or get batch
+    let batch_id = null;
+    if (batch_number) {
+      const existingBatch = await pool.query(
+        "SELECT batch_id FROM product_batches WHERE product_id = $1 AND batch_number = $2",
+        [product_id, batch_number]
+      );
+      
+      if (existingBatch.rows.length > 0) {
+        batch_id = existingBatch.rows[0].batch_id;
+      } else {
+        const newBatch = await pool.query(
+          "INSERT INTO product_batches (product_id, batch_number, expiry_date, quantity, import_id) VALUES ($1, $2, $3, 0, $4) RETURNING batch_id",
+          [product_id, batch_number, expiry_date, id]
+        );
+        batch_id = newBatch.rows[0].batch_id;
+      }
+    }
+    
     const newItem = await pool.query(
-      "INSERT INTO import_items (import_invoice_id, product_id, quantity, unit_price, total_price) VALUES($1, $2, $3, $4, $5) RETURNING *",
-      [id, product_id, quantity, unit_price, total_price]
+      "INSERT INTO import_items (import_invoice_id, product_id, quantity, unit_price, total_price, batch_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *",
+      [id, product_id, quantity, unit_price, total_price, batch_id]
     );
     
     // Update invoice total
@@ -152,6 +173,14 @@ router.post("/:id/finalize", authorization, async (req, res) => {
         "UPDATE products SET current_stock = current_stock + $1 WHERE id = $2",
         [item.quantity, item.product_id]
       );
+      
+      // Update batch quantity if batch exists
+      if (item.batch_id) {
+        await client.query(
+          "UPDATE product_batches SET quantity = quantity + $1 WHERE batch_id = $2",
+          [item.quantity, item.batch_id]
+        );
+      }
       
       // Create stock movement
       await client.query(

@@ -45,9 +45,11 @@ router.get("/:id", authorization, async (req, res) => {
     `, [id]);
     
     const items = await pool.query(`
-      SELECT si.*, p.name as product_name, p.current_stock 
+      SELECT si.*, p.name as product_name, p.current_stock,
+             pb.batch_number, pb.expiry_date
       FROM sales_items si 
       LEFT JOIN products p ON si.product_id = p.id 
+      LEFT JOIN product_batches pb ON si.batch_id = pb.batch_id
       WHERE si.invoice_id = $1
     `, [id]);
     
@@ -62,7 +64,7 @@ router.get("/:id", authorization, async (req, res) => {
 router.post("/:id/items", authorization, async (req, res) => {
   try {
     const { id } = req.params;
-    const { product_id, quantity, unit_price } = req.body;
+    const { product_id, quantity, unit_price, batch_id } = req.body;
     const total_price = quantity * unit_price;
     
     // Check if invoice is draft
@@ -71,15 +73,23 @@ router.post("/:id/items", authorization, async (req, res) => {
       return res.status(400).json("Cannot modify finalized invoice");
     }
     
-    // Check stock availability
-    const product = await pool.query("SELECT current_stock FROM products WHERE id = $1", [product_id]);
-    if (product.rows[0]?.current_stock < quantity) {
-      return res.status(400).json(`Insufficient stock. Available: ${product.rows[0]?.current_stock}`);
+    // Check batch stock if batch provided
+    if (batch_id) {
+      const batch = await pool.query("SELECT quantity FROM product_batches WHERE batch_id = $1", [batch_id]);
+      if (batch.rows[0]?.quantity < quantity) {
+        return res.status(400).json(`Insufficient batch stock. Available: ${batch.rows[0]?.quantity}`);
+      }
+    } else {
+      // Check overall stock availability
+      const product = await pool.query("SELECT current_stock FROM products WHERE id = $1", [product_id]);
+      if (product.rows[0]?.current_stock < quantity) {
+        return res.status(400).json(`Insufficient stock. Available: ${product.rows[0]?.current_stock}`);
+      }
     }
     
     const newItem = await pool.query(
-      "INSERT INTO sales_items (invoice_id, product_id, quantity, unit_price, total_price) VALUES($1, $2, $3, $4, $5) RETURNING *",
-      [id, product_id, quantity, unit_price, total_price]
+      "INSERT INTO sales_items (invoice_id, product_id, quantity, unit_price, total_price, batch_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING *",
+      [id, product_id, quantity, unit_price, total_price, batch_id]
     );
     
     // Update invoice total
@@ -143,14 +153,29 @@ router.post("/:id/finalize", authorization, async (req, res) => {
     
     // Verify stock and update for each item
     for (const item of items.rows) {
-      const product = await client.query("SELECT current_stock FROM products WHERE id = $1", [item.product_id]);
-      
-      const currentStock = parseFloat(product.rows[0]?.current_stock) || 0;
       const requiredQty = parseFloat(item.quantity) || 0;
       
-      if (currentStock < requiredQty) {
-        await client.query('ROLLBACK');
-        return res.status(400).json(`Insufficient stock for product ID ${item.product_id}. Available: ${currentStock}, Required: ${requiredQty}`);
+      // Check batch stock if batch provided
+      if (item.batch_id) {
+        const batch = await client.query("SELECT quantity FROM product_batches WHERE batch_id = $1", [item.batch_id]);
+        if (batch.rows[0]?.quantity < requiredQty) {
+          await client.query('ROLLBACK');
+          return res.status(400).json(`Insufficient batch stock for product ID ${item.product_id}`);
+        }
+        
+        // Deduct from batch
+        await client.query(
+          "UPDATE product_batches SET quantity = quantity - $1 WHERE batch_id = $2",
+          [requiredQty, item.batch_id]
+        );
+      } else {
+        const product = await client.query("SELECT current_stock FROM products WHERE id = $1", [item.product_id]);
+        const currentStock = parseFloat(product.rows[0]?.current_stock) || 0;
+        
+        if (currentStock < requiredQty) {
+          await client.query('ROLLBACK');
+          return res.status(400).json(`Insufficient stock for product ID ${item.product_id}. Available: ${currentStock}, Required: ${requiredQty}`);
+        }
       }
       
       // Update product stock
@@ -217,14 +242,27 @@ router.post("/create-complete", authorization, async (req, res) => {
     
     // Check stock availability for all items first
     for (const item of items) {
-      const product = await client.query("SELECT current_stock, name FROM products WHERE id = $1", [item.product_id]);
-      if (!product.rows[0]) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ message: `Product not found` });
-      }
-      if (product.rows[0].current_stock < item.quantity) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ message: `Insufficient stock for ${product.rows[0].name}. Available: ${product.rows[0].current_stock}` });
+      if (item.batch_id) {
+        // Check batch stock
+        const batch = await client.query("SELECT quantity, batch_number FROM product_batches WHERE batch_id = $1", [item.batch_id]);
+        if (!batch.rows[0]) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ message: `Batch not found` });
+        }
+        if (batch.rows[0].quantity < item.quantity) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ message: `Insufficient stock for batch ${batch.rows[0].batch_number}. Available: ${batch.rows[0].quantity}` });
+        }
+      } else {
+        const product = await client.query("SELECT current_stock, name FROM products WHERE id = $1", [item.product_id]);
+        if (!product.rows[0]) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ message: `Product not found` });
+        }
+        if (product.rows[0].current_stock < item.quantity) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ message: `Insufficient stock for ${product.rows[0].name}. Available: ${product.rows[0].current_stock}` });
+        }
       }
     }
     
@@ -241,17 +279,25 @@ router.post("/create-complete", authorization, async (req, res) => {
     for (const item of items) {
       const totalPrice = item.quantity * item.unit_price;
       
-      // Insert item
+      // Insert item with batch_id
       await client.query(
-        "INSERT INTO sales_items (invoice_id, product_id, quantity, unit_price, total_price) VALUES($1, $2, $3, $4, $5)",
-        [invoiceId, item.product_id, item.quantity, item.unit_price, totalPrice]
+        "INSERT INTO sales_items (invoice_id, product_id, quantity, unit_price, total_price, batch_id) VALUES($1, $2, $3, $4, $5, $6)",
+        [invoiceId, item.product_id, item.quantity, item.unit_price, totalPrice, item.batch_id || null]
       );
       
-      // Deduct stock
+      // Deduct stock from product
       await client.query(
         "UPDATE products SET current_stock = current_stock - $1 WHERE id = $2",
         [item.quantity, item.product_id]
       );
+      
+      // Deduct from batch if batch provided
+      if (item.batch_id) {
+        await client.query(
+          "UPDATE product_batches SET quantity = quantity - $1 WHERE batch_id = $2",
+          [item.quantity, item.batch_id]
+        );
+      }
       
       // Create stock movement
       await client.query(

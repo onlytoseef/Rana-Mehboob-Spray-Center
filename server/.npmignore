@@ -1,0 +1,2 @@
+# Empty file to override .gitignore
+# This ensures node_modules is NOT ignored during electron-builder copy

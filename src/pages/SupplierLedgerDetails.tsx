@@ -192,7 +192,7 @@ const SupplierLedgerDetails = () => {
         { header: 'Date', accessor: (item: Payment) => new Date(item.created_at).toLocaleDateString('en-PK') },
         { 
             header: 'Type', 
-            accessor: (item: Payment) => (
+            accessor: () => (
                 <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
                     Payment to Supplier
                 </span>

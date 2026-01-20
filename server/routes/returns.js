@@ -71,9 +71,10 @@ router.get("/:id", authorization, async (req, res) => {
         `, [id]);
         
         const items = await pool.query(`
-            SELECT ri.*, p.name as product_name 
+            SELECT ri.*, p.name as product_name, pb.batch_number, pb.expiry_date
             FROM return_items ri 
             LEFT JOIN products p ON ri.product_id = p.id 
+            LEFT JOIN product_batches pb ON ri.batch_id = pb.batch_id
             WHERE ri.return_id = $1
         `, [id]);
         
@@ -174,7 +175,10 @@ router.get("/invoice/customer/:invoiceId", authorization, async (req, res) => {
             SELECT 
                 sit.id,
                 sit.product_id,
+                sit.batch_id,
                 p.name as product_name,
+                pb.batch_number,
+                pb.expiry_date,
                 sit.quantity as sold_quantity,
                 sit.unit_price,
                 sit.total_price,
@@ -182,13 +186,16 @@ router.get("/invoice/customer/:invoiceId", authorization, async (req, res) => {
                 sit.quantity - COALESCE(returned.returned_qty, 0) as returnable_quantity
             FROM sales_items sit
             LEFT JOIN products p ON sit.product_id = p.id
+            LEFT JOIN product_batches pb ON sit.batch_id = pb.batch_id
             LEFT JOIN (
-                SELECT ri.product_id, r.invoice_id, SUM(ri.quantity) as returned_qty
+                SELECT ri.product_id, ri.batch_id, r.invoice_id, SUM(ri.quantity) as returned_qty
                 FROM return_items ri
                 JOIN returns r ON ri.return_id = r.id
                 WHERE r.invoice_id = $1 AND r.return_type = 'customer'
-                GROUP BY ri.product_id, r.invoice_id
-            ) returned ON sit.product_id = returned.product_id AND sit.invoice_id = returned.invoice_id
+                GROUP BY ri.product_id, ri.batch_id, r.invoice_id
+            ) returned ON sit.product_id = returned.product_id 
+                AND (sit.batch_id = returned.batch_id OR (sit.batch_id IS NULL AND returned.batch_id IS NULL))
+                AND sit.invoice_id = returned.invoice_id
             WHERE sit.invoice_id = $1
         `, [invoiceId]);
         
@@ -219,7 +226,10 @@ router.get("/invoice/supplier/:invoiceId", authorization, async (req, res) => {
             SELECT 
                 iit.id,
                 iit.product_id,
+                iit.batch_id,
                 p.name as product_name,
+                pb.batch_number,
+                pb.expiry_date,
                 iit.quantity as purchased_quantity,
                 iit.unit_price,
                 iit.total_price,
@@ -227,13 +237,16 @@ router.get("/invoice/supplier/:invoiceId", authorization, async (req, res) => {
                 iit.quantity - COALESCE(returned.returned_qty, 0) as returnable_quantity
             FROM import_items iit
             LEFT JOIN products p ON iit.product_id = p.id
+            LEFT JOIN product_batches pb ON iit.batch_id = pb.batch_id
             LEFT JOIN (
-                SELECT ri.product_id, r.invoice_id, SUM(ri.quantity) as returned_qty
+                SELECT ri.product_id, ri.batch_id, r.invoice_id, SUM(ri.quantity) as returned_qty
                 FROM return_items ri
                 JOIN returns r ON ri.return_id = r.id
                 WHERE r.invoice_id = $1 AND r.return_type = 'supplier'
-                GROUP BY ri.product_id, r.invoice_id
-            ) returned ON iit.product_id = returned.product_id AND iit.import_invoice_id = returned.invoice_id
+                GROUP BY ri.product_id, ri.batch_id, r.invoice_id
+            ) returned ON iit.product_id = returned.product_id 
+                AND (iit.batch_id = returned.batch_id OR (iit.batch_id IS NULL AND returned.batch_id IS NULL))
+                AND iit.import_invoice_id = returned.invoice_id
             WHERE iit.import_invoice_id = $1
         `, [invoiceId]);
         
@@ -289,11 +302,11 @@ router.post("/", authorization, async (req, res) => {
         
         // Insert return items and update stock
         for (const item of items) {
-            // Insert return item
+            // Insert return item with batch_id
             await client.query(
-                `INSERT INTO return_items (return_id, product_id, quantity, unit_price, total_price) 
-                 VALUES($1, $2, $3, $4, $5)`,
-                [returnId, item.product_id, item.quantity, item.unit_price, item.quantity * item.unit_price]
+                `INSERT INTO return_items (return_id, product_id, quantity, unit_price, total_price, batch_id) 
+                 VALUES($1, $2, $3, $4, $5, $6)`,
+                [returnId, item.product_id, item.quantity, item.unit_price, item.quantity * item.unit_price, item.batch_id || null]
             );
             
             if (return_type === 'customer') {
@@ -302,6 +315,14 @@ router.post("/", authorization, async (req, res) => {
                     "UPDATE products SET current_stock = current_stock + $1 WHERE id = $2",
                     [item.quantity, item.product_id]
                 );
+                
+                // Also add stock back to the batch if batch_id exists
+                if (item.batch_id) {
+                    await client.query(
+                        "UPDATE product_batches SET quantity = quantity + $1 WHERE batch_id = $2",
+                        [item.quantity, item.batch_id]
+                    );
+                }
                 
                 // Record stock movement
                 await client.query(
@@ -315,6 +336,14 @@ router.post("/", authorization, async (req, res) => {
                     "UPDATE products SET current_stock = current_stock - $1 WHERE id = $2",
                     [item.quantity, item.product_id]
                 );
+                
+                // Also remove stock from the batch if batch_id exists
+                if (item.batch_id) {
+                    await client.query(
+                        "UPDATE product_batches SET quantity = quantity - $1 WHERE batch_id = $2",
+                        [item.quantity, item.batch_id]
+                    );
+                }
                 
                 // Record stock movement
                 await client.query(

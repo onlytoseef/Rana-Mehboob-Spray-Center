@@ -49,6 +49,9 @@ interface InvoiceItem {
     id: number;
     product_id: number;
     product_name: string;
+    batch_id: number | null;
+    batch_number: string | null;
+    expiry_date: string | null;
     sold_quantity?: number;
     purchased_quantity?: number;
     unit_price: number;
@@ -59,6 +62,8 @@ interface InvoiceItem {
 interface ReturnItem {
     product_id: number;
     product_name: string;
+    batch_id: number | null;
+    batch_number: string | null;
     quantity: number;
     max_quantity: number;
     unit_price: number;
@@ -218,21 +223,23 @@ const Returns = () => {
     }, [selectedInvoiceId]);
 
     // Handle quantity change for return item
-    const handleQuantityChange = (productId: number, quantity: number, item: InvoiceItem) => {
+    const handleQuantityChange = (productId: number, batchId: number | null, quantity: number, item: InvoiceItem) => {
         const maxQty = item.returnable_quantity;
         const validQty = Math.min(Math.max(0, quantity), maxQty);
         
         setReturnItems(prev => {
-            const existing = prev.find(i => i.product_id === productId);
+            const existing = prev.find(i => i.product_id === productId && i.batch_id === batchId);
             if (validQty === 0) {
-                return prev.filter(i => i.product_id !== productId);
+                return prev.filter(i => !(i.product_id === productId && i.batch_id === batchId));
             }
             if (existing) {
-                return prev.map(i => i.product_id === productId ? { ...i, quantity: validQty } : i);
+                return prev.map(i => (i.product_id === productId && i.batch_id === batchId) ? { ...i, quantity: validQty } : i);
             }
             return [...prev, {
                 product_id: productId,
                 product_name: item.product_name,
+                batch_id: batchId,
+                batch_number: item.batch_number,
                 quantity: validQty,
                 max_quantity: maxQty,
                 unit_price: parseFloat(item.unit_price.toString())
@@ -279,7 +286,12 @@ const Returns = () => {
                 return_type: returnType,
                 invoice_id: parseInt(selectedInvoiceId),
                 party_id: parseInt(selectedPartyId),
-                items: returnItems,
+                items: returnItems.map(item => ({
+                    product_id: item.product_id,
+                    batch_id: item.batch_id,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                })),
                 reason,
                 refund_type: refundType,
                 notes
@@ -685,6 +697,7 @@ const Returns = () => {
                                                     <thead style={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' }}>
                                                         <tr>
                                                             <th className="py-3 px-4 text-left text-sm font-semibold text-white">Product</th>
+                                                            <th className="py-3 px-4 text-left text-sm font-semibold text-white">Batch</th>
                                                             <th className="py-3 px-4 text-center text-sm font-semibold text-white">
                                                                 {returnType === 'customer' ? 'Sold' : 'Purchased'}
                                                             </th>
@@ -696,16 +709,24 @@ const Returns = () => {
                                                     </thead>
                                                     <tbody>
                                                         {invoiceItems.map((item, idx) => {
-                                                            const returnItem = returnItems.find(r => r.product_id === item.product_id);
+                                                            const returnItem = returnItems.find(r => r.product_id === item.product_id && r.batch_id === item.batch_id);
                                                             const qty = returnItem?.quantity || 0;
                                                             return (
                                                                 <tr 
-                                                                    key={item.id}
+                                                                    key={`${item.id}-${item.batch_id}`}
                                                                     className="border-b"
                                                                     style={{ backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC', borderColor: '#E2E8F0' }}
                                                                 >
                                                                     <td className="py-3 px-4 text-sm" style={{ color: '#0F172A' }}>
                                                                         {item.product_name}
+                                                                    </td>
+                                                                    <td className="py-3 px-4 text-sm" style={{ color: '#64748B' }}>
+                                                                        {item.batch_number || '-'}
+                                                                        {item.expiry_date && (
+                                                                            <span className="block text-xs text-gray-400">
+                                                                                Exp: {new Date(item.expiry_date).toLocaleDateString()}
+                                                                            </span>
+                                                                        )}
                                                                     </td>
                                                                     <td className="py-3 px-4 text-sm text-center" style={{ color: '#0F172A' }}>
                                                                         {item.sold_quantity || item.purchased_quantity}
@@ -722,7 +743,7 @@ const Returns = () => {
                                                                             min="0"
                                                                             max={item.returnable_quantity}
                                                                             value={qty}
-                                                                            onChange={(e) => handleQuantityChange(item.product_id, parseInt(e.target.value) || 0, item)}
+                                                                            onChange={(e) => handleQuantityChange(item.product_id, item.batch_id, parseInt(e.target.value) || 0, item)}
                                                                             className="w-20 px-2 py-1 border rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                                                             style={{ borderColor: '#E2E8F0' }}
                                                                         />

@@ -34,10 +34,20 @@ interface Product {
     current_stock: number;
 }
 
+interface Batch {
+    batch_id: number;
+    batch_number: string;
+    expiry_date: string | null;
+    quantity: number;
+}
+
 interface SalesItem {
     id: number;
     product_id: number;
     product_name: string;
+    batch_id: number | null;
+    batch_number: string | null;
+    expiry_date: string | null;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -48,6 +58,8 @@ interface SalesItem {
 interface TempItem {
     product_id: string;
     product_name: string;
+    batch_id: number | null;
+    batch_number: string;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -83,8 +95,27 @@ const Sales = () => {
 
     // Add Item Row States
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedBatchId, setSelectedBatchId] = useState('');
+    const [availableBatches, setAvailableBatches] = useState<Batch[]>([]);
     const [itemQuantity, setItemQuantity] = useState(1);
     const [itemPrice, setItemPrice] = useState(0);
+
+    // Fetch batches when product is selected
+    const fetchBatchesForProduct = async (productId: string) => {
+        if (!productId) {
+            setAvailableBatches([]);
+            setSelectedBatchId('');
+            return;
+        }
+        try {
+            const res = await api.get(`/batches/product/${productId}`);
+            setAvailableBatches(res.data);
+            setSelectedBatchId('');
+        } catch (err: any) {
+            console.error('Failed to fetch batches:', err);
+            setAvailableBatches([]);
+        }
+    };
 
     const fetchInvoices = async () => {
         try {
@@ -152,6 +183,10 @@ const Sales = () => {
             toast.error('Please select a product');
             return;
         }
+        if (!selectedBatchId) {
+            toast.error('Please select a batch');
+            return;
+        }
         if (itemQuantity <= 0) {
             toast.error('Quantity must be greater than 0');
             return;
@@ -164,38 +199,47 @@ const Sales = () => {
         const product = products.find(p => p.id === Number(selectedProductId));
         if (!product) return;
 
-        // Check if already in list
-        const existingIndex = tempItems.findIndex(item => item.product_id === selectedProductId);
+        const batch = availableBatches.find(b => b.batch_id === Number(selectedBatchId));
+        if (!batch) return;
+
+        // Check if same product+batch already in list
+        const existingIndex = tempItems.findIndex(
+            item => item.product_id === selectedProductId && item.batch_id === Number(selectedBatchId)
+        );
         if (existingIndex !== -1) {
-            toast.error('Product already added. Remove it first to change.');
+            toast.error('This product with same batch already added. Remove it first to change.');
             return;
         }
 
-        // Check stock
-        if (itemQuantity > product.current_stock) {
-            toast.error(`Insufficient stock! Available: ${product.current_stock}`);
+        // Check batch stock
+        if (itemQuantity > batch.quantity) {
+            toast.error(`Insufficient batch stock! Available in this batch: ${batch.quantity}`);
             return;
         }
 
         const newItem: TempItem = {
             product_id: selectedProductId,
             product_name: product.name,
+            batch_id: Number(selectedBatchId),
+            batch_number: batch.batch_number,
             quantity: itemQuantity,
             unit_price: itemPrice,
             total_price: itemQuantity * itemPrice,
-            current_stock: product.current_stock,
+            current_stock: batch.quantity,
         };
 
         setTempItems([...tempItems, newItem]);
         setSelectedProductId('');
+        setSelectedBatchId('');
+        setAvailableBatches([]);
         setItemQuantity(1);
         setItemPrice(0);
         toast.success('Item added');
     };
 
     // Remove item from temp list
-    const handleRemoveItemFromList = (productId: string) => {
-        setTempItems(tempItems.filter(item => item.product_id !== productId));
+    const handleRemoveItemFromList = (productId: string, batchId: number | null) => {
+        setTempItems(tempItems.filter(item => !(item.product_id === productId && item.batch_id === batchId)));
     };
 
     // Reset modal
@@ -208,6 +252,8 @@ const Sales = () => {
         setTempItems([]);
         setDiscountPercent(0);
         setSelectedProductId('');
+        setSelectedBatchId('');
+        setAvailableBatches([]);
         setItemQuantity(1);
         setItemPrice(0);
     };
@@ -248,6 +294,7 @@ const Sales = () => {
                 type: invoiceType,
                 items: tempItems.map(item => ({
                     product_id: item.product_id,
+                    batch_id: item.batch_id,
                     quantity: item.quantity,
                     unit_price: item.unit_price,
                 })),
@@ -350,6 +397,8 @@ const Sales = () => {
 
     const itemColumns = [
         { header: 'Product', accessor: 'product_name' as keyof SalesItem },
+        { header: 'Batch', accessor: (item: SalesItem) => item.batch_number || '-' },
+        { header: 'Expiry', accessor: (item: SalesItem) => item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '-' },
         { header: 'Quantity', accessor: 'quantity' as keyof SalesItem },
         { header: 'Unit Price', accessor: (item: SalesItem) => formatPKR(item.unit_price) },
         { header: 'Total', accessor: (item: SalesItem) => formatPKR(item.total_price) },
@@ -583,49 +632,76 @@ const Sales = () => {
                     <div className="p-4 rounded-lg border-2" style={{ borderColor: '#EBE0C0', backgroundColor: '#FAFAF5' }}>
                         <h3 className="font-medium mb-3" style={{ color: '#242A2A' }}>Add Items</h3>
                         
-                        <div className="grid grid-cols-12 gap-2 items-end">
-                            <div className="col-span-12 sm:col-span-4">
-                                <label className="block text-xs font-medium mb-1">Product</label>
-                                <select
-                                    value={selectedProductId}
-                                    onChange={(e) => setSelectedProductId(e.target.value)}
-                                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                                    style={{ borderColor: '#D1D5DB' }}
-                                >
-                                    <option value="">Select Product</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id} disabled={p.current_stock === 0}>
-                                            {p.name} (Stock: {p.current_stock})
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-12 gap-2 items-end">
+                                <div className="col-span-12 sm:col-span-6">
+                                    <label className="block text-xs font-medium mb-1">Product</label>
+                                    <select
+                                        value={selectedProductId}
+                                        onChange={(e) => {
+                                            setSelectedProductId(e.target.value);
+                                            fetchBatchesForProduct(e.target.value);
+                                        }}
+                                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                                        style={{ borderColor: '#D1D5DB' }}
+                                    >
+                                        <option value="">Select Product</option>
+                                        {products.map(p => (
+                                            <option key={p.id} value={p.id} disabled={p.current_stock === 0}>
+                                                {p.name} (Stock: {p.current_stock})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="col-span-12 sm:col-span-6">
+                                    <label className="block text-xs font-medium mb-1">Batch</label>
+                                    <select
+                                        value={selectedBatchId}
+                                        onChange={(e) => setSelectedBatchId(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                                        style={{ borderColor: '#D1D5DB' }}
+                                        disabled={!selectedProductId || availableBatches.length === 0}
+                                    >
+                                        <option value="">
+                                            {!selectedProductId ? 'Select product first' : 
+                                             availableBatches.length === 0 ? 'No batches available' : 'Select Batch'}
                                         </option>
-                                    ))}
-                                </select>
+                                        {availableBatches.map(b => (
+                                            <option key={b.batch_id} value={b.batch_id} disabled={b.quantity === 0}>
+                                                {b.batch_number} (Stock: {b.quantity}) {b.expiry_date ? `- Exp: ${new Date(b.expiry_date).toLocaleDateString()}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                            <div className="col-span-4 sm:col-span-2">
-                                <label className="block text-xs font-medium mb-1">Qty</label>
-                                <input
-                                    type="number"
-                                    value={itemQuantity}
-                                    onChange={(e) => setItemQuantity(Number(e.target.value))}
-                                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                                    style={{ borderColor: '#D1D5DB' }}
-                                    min={1}
-                                />
-                            </div>
-                            <div className="col-span-4 sm:col-span-3">
-                                <label className="block text-xs font-medium mb-1">Price</label>
-                                <input
-                                    type="number"
-                                    value={itemPrice}
-                                    onChange={(e) => setItemPrice(Number(e.target.value))}
-                                    className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
-                                    style={{ borderColor: '#D1D5DB' }}
-                                    min={0}
-                                />
-                            </div>
-                            <div className="col-span-4 sm:col-span-3">
-                                <Button type="button" onClick={handleAddItemToList} size="sm" className="w-full">
-                                    <FaPlus className="mr-1" /> Add
-                                </Button>
+                            <div className="grid grid-cols-12 gap-2 items-end">
+                                <div className="col-span-4 sm:col-span-3">
+                                    <label className="block text-xs font-medium mb-1">Qty</label>
+                                    <input
+                                        type="number"
+                                        value={itemQuantity}
+                                        onChange={(e) => setItemQuantity(Number(e.target.value))}
+                                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                                        style={{ borderColor: '#D1D5DB' }}
+                                        min={1}
+                                    />
+                                </div>
+                                <div className="col-span-4 sm:col-span-4">
+                                    <label className="block text-xs font-medium mb-1">Price</label>
+                                    <input
+                                        type="number"
+                                        value={itemPrice}
+                                        onChange={(e) => setItemPrice(Number(e.target.value))}
+                                        className="w-full px-3 py-2 rounded-lg border-2 focus:outline-none text-sm"
+                                        style={{ borderColor: '#D1D5DB' }}
+                                        min={0}
+                                    />
+                                </div>
+                                <div className="col-span-4 sm:col-span-5">
+                                    <Button type="button" onClick={handleAddItemToList} size="sm" className="w-full">
+                                        <FaPlus className="mr-1" /> Add Item
+                                    </Button>
+                                </div>
                             </div>
                         </div>
 
@@ -636,6 +712,7 @@ const Sales = () => {
                                     <thead>
                                         <tr className="border-b" style={{ borderColor: '#EBE0C0' }}>
                                             <th className="text-left py-2">Product</th>
+                                            <th className="text-left py-2">Batch</th>
                                             <th className="text-center py-2">Qty</th>
                                             <th className="text-right py-2">Price</th>
                                             <th className="text-right py-2">Total</th>
@@ -644,15 +721,16 @@ const Sales = () => {
                                     </thead>
                                     <tbody>
                                         {tempItems.map((item) => (
-                                            <tr key={item.product_id} className="border-b" style={{ borderColor: '#EBE0C0' }}>
+                                            <tr key={`${item.product_id}-${item.batch_id}`} className="border-b" style={{ borderColor: '#EBE0C0' }}>
                                                 <td className="py-2">{item.product_name}</td>
+                                                <td className="py-2 text-xs text-gray-600">{item.batch_number}</td>
                                                 <td className="text-center py-2">{item.quantity}</td>
                                                 <td className="text-right py-2">{formatPKR(item.unit_price)}</td>
                                                 <td className="text-right py-2 font-medium">{formatPKR(item.total_price)}</td>
                                                 <td className="py-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleRemoveItemFromList(item.product_id)}
+                                                        onClick={() => handleRemoveItemFromList(item.product_id, item.batch_id)}
                                                         className="text-red-500 hover:text-red-700 p-1"
                                                     >
                                                         <FaTrash size={12} />

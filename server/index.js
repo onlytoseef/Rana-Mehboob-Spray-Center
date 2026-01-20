@@ -1,7 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+
+// Load dotenv with explicit path
+try {
+    require('dotenv').config({ path: path.join(__dirname, '.env') });
+} catch (err) {
+    console.log('No .env file found, using config file instead');
+}
+
 const pool = require('./db');
-require('dotenv').config();
 
 const app = express();
 
@@ -15,6 +23,12 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Config routes (no auth required)
+app.use("/api/config", require("./routes/config"));
+
+// Backup route (no auth required - runs on window close)
+app.use("/api/backup", require("./routes/backup"));
+
 // Routes
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/products", require("./routes/products"));
@@ -27,6 +41,7 @@ app.use("/api/returns", require("./routes/returns"));
 app.use("/api/payments", require("./routes/payments"));
 app.use("/api/ledger", require("./routes/ledger"));
 app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/batches", require("./routes/batches"));
 
 // Test Route
 app.get('/', (req, res) => {

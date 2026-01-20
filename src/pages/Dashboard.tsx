@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { cachedGet } from '../services/api';
 import useCurrencyConverter from '../hooks/useCurrencyConverter';
-import { FaChartLine, FaFileImport, FaBoxes, FaHandHoldingUsd, FaMoneyCheckAlt, FaWallet, FaFilePdf, FaMoneyBillWave, FaCreditCard } from 'react-icons/fa';
+import { FaChartLine, FaFileImport, FaBoxes, FaHandHoldingUsd, FaMoneyCheckAlt, FaFilePdf, FaMoneyBillWave, FaCreditCard } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import Button from '../components/ui/Button';
 import { exportDashboardPDF } from '../utils/pdfExport';

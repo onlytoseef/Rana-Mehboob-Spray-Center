@@ -4,7 +4,6 @@ import Button from '../components/ui/Button';
 import DatePicker from '../components/ui/DatePicker';
 import SelectInput from '../components/ui/SelectInput';
 import DataTable from '../components/ui/DataTable';
-import Modal from '../components/ui/Modal';
 import useCurrencyConverter from '../hooks/useCurrencyConverter';
 import toast from 'react-hot-toast';
 import { FaTimes, FaBox, FaFileInvoice } from 'react-icons/fa';
@@ -22,6 +21,8 @@ interface Customer {
 interface InvoiceItem {
     id: number;
     product_name: string;
+    batch_number: string | null;
+    expiry_date: string | null;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -150,6 +151,8 @@ const Reports = () => {
                 items: itemsData.map((item: any) => ({
                     id: item.id,
                     product_name: item.product_name,
+                    batch_number: item.batch_number || null,
+                    expiry_date: item.expiry_date || null,
                     quantity: item.quantity,
                     unit_price: parseFloat(item.unit_price) || 0,
                     total_price: parseFloat(item.total_price) || 0
@@ -424,6 +427,8 @@ const Reports = () => {
                                                 <thead style={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' }}>
                                                     <tr>
                                                         <th className="py-3 px-4 text-left text-sm font-semibold text-white">Product</th>
+                                                        <th className="py-3 px-4 text-left text-sm font-semibold text-white">Batch</th>
+                                                        <th className="py-3 px-4 text-left text-sm font-semibold text-white">Expiry</th>
                                                         <th className="py-3 px-4 text-right text-sm font-semibold text-white">Qty</th>
                                                         <th className="py-3 px-4 text-right text-sm font-semibold text-white">Rate</th>
                                                         <th className="py-3 px-4 text-right text-sm font-semibold text-white">Total</th>
@@ -440,6 +445,12 @@ const Reports = () => {
                                                                 <td className="py-3 px-4 text-sm" style={{ color: '#0F172A' }}>
                                                                     {item.product_name}
                                                                 </td>
+                                                                <td className="py-3 px-4 text-sm" style={{ color: '#64748B' }}>
+                                                                    {item.batch_number || '-'}
+                                                                </td>
+                                                                <td className="py-3 px-4 text-sm" style={{ color: '#64748B' }}>
+                                                                    {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '-'}
+                                                                </td>
                                                                 <td className="py-3 px-4 text-sm text-right" style={{ color: '#0F172A' }}>
                                                                     {item.quantity}
                                                                 </td>
@@ -453,7 +464,7 @@ const Reports = () => {
                                                         ))
                                                     ) : (
                                                         <tr>
-                                                            <td colSpan={4} className="py-8 text-center text-sm" style={{ color: '#64748B' }}>
+                                                            <td colSpan={6} className="py-8 text-center text-sm" style={{ color: '#64748B' }}>
                                                                 No items found
                                                             </td>
                                                         </tr>

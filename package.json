@@ -1,13 +1,18 @@
 {
-  "name": "786-spareparts",
+  "name": "mehboob-spray-center",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "author": "Mehboob Spray Center",
+  "description": "Mehboob Spray Center - Inventory & Billing System",
   "scripts": {
     "dev": "vite",
+    "dev:full": "concurrently \"npm run dev\" \"cd server && npm run dev\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "concurrently \"npm run preview\" \"cd server && npm start\"",
+    "server": "cd server && npm start"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
@@ -30,6 +35,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
