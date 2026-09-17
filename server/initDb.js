@@ -101,6 +101,24 @@ async function initDatabase() {
                 total_price DECIMAL(12, 2) NOT NULL
             );
 
+            -- Product Batches Table
+            CREATE TABLE IF NOT EXISTS product_batches (
+                batch_id SERIAL PRIMARY KEY,
+                product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+                batch_number VARCHAR(100) NOT NULL,
+                expiry_date DATE,
+                quantity INTEGER DEFAULT 0,
+                import_id INTEGER REFERENCES import_invoices(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(product_id, batch_number)
+            );
+
+            ALTER TABLE import_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL;
+
+            ALTER TABLE sales_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL;
+
             -- Payments Table
             CREATE TABLE IF NOT EXISTS payments (
                 id SERIAL PRIMARY KEY,

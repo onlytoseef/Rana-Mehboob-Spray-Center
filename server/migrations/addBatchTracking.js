@@ -19,6 +19,26 @@ async function addBatchTracking() {
         `);
         console.log('✅ product_batches table created');
 
+        // Normalize the import item foreign-key column used by import routes.
+        const importInvoiceColumnCheck = await pool.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'import_items'
+              AND column_name IN ('invoice_id', 'import_invoice_id')
+        `);
+        const importInvoiceColumns = importInvoiceColumnCheck.rows.map(row => row.column_name);
+        if (importInvoiceColumns.includes('invoice_id') && !importInvoiceColumns.includes('import_invoice_id')) {
+            await pool.query(`ALTER TABLE import_items RENAME COLUMN invoice_id TO import_invoice_id`);
+            console.log('✅ import_items.invoice_id renamed to import_invoice_id');
+        } else if (!importInvoiceColumns.includes('import_invoice_id')) {
+            await pool.query(`
+                ALTER TABLE import_items
+                ADD COLUMN import_invoice_id INTEGER REFERENCES import_invoices(id) ON DELETE CASCADE
+            `);
+            console.log('✅ import_invoice_id added to import_items');
+        }
+
         // Add batch_id to import_items
         const importItemsCheck = await pool.query(`
             SELECT column_name FROM information_schema.columns 

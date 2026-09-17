@@ -106,7 +106,7 @@ async function setup() {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS import_items (
                 id SERIAL PRIMARY KEY,
-                invoice_id INTEGER REFERENCES import_invoices(id) ON DELETE CASCADE,
+                import_invoice_id INTEGER REFERENCES import_invoices(id) ON DELETE CASCADE,
                 product_id INTEGER REFERENCES products(id),
                 quantity INTEGER,
                 unit_price INTEGER,
@@ -134,6 +134,29 @@ async function setup() {
                 unit_price DECIMAL(10,2),
                 total_price DECIMAL(15,2)
             )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS product_batches (
+                batch_id SERIAL PRIMARY KEY,
+                product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+                batch_number VARCHAR(100) NOT NULL,
+                expiry_date DATE,
+                quantity DECIMAL(10,2) DEFAULT 0,
+                import_id INTEGER REFERENCES import_invoices(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(product_id, batch_number)
+            )
+        `);
+
+        await pool.query(`
+            ALTER TABLE import_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL
+        `);
+
+        await pool.query(`
+            ALTER TABLE sales_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL
         `);
 
         await pool.query(`
