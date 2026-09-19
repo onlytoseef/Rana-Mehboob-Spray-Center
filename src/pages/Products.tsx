@@ -261,7 +261,6 @@ const Products = () => {
                         label="Name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
                     />
                     <div className="mb-3">
                         <label className="block text-sm font-medium mb-1" style={{ color: '#242A2A' }}>

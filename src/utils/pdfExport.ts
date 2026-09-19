@@ -48,7 +48,7 @@ export const exportToPDF = (options: ExportOptions) => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('Quality Spray Products & Services', pageWidth / 2, 22, { align: 'center' });
-    doc.text('Phone: +92-XXX-XXXXXXX | Email: info@mehboobspraycenter.com', pageWidth / 2, 28, { align: 'center' });
+    doc.text('Phone: Your Contact Number | Email: your@email.com', pageWidth / 2, 28, { align: 'center' });
 
     // Report Title
     doc.setTextColor(36, 42, 42);
@@ -183,7 +183,7 @@ export const exportDashboardPDF = (dashboardData: any) => {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text('Quality Spray Products & Services', pageWidth / 2, 22, { align: 'center' });
-    doc.text('Phone: +92-XXX-XXXXXXX | Email: info@mehboobspraycenter.com', pageWidth / 2, 28, { align: 'center' });
+    doc.text('Phone: Your Contact Number | Email: your@email.com', pageWidth / 2, 28, { align: 'center' });
 
     // Report Title
     doc.setTextColor(15, 23, 42); // #0F172A

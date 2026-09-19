@@ -211,8 +211,8 @@ const Imports = () => {
             toast.error('Unit price cannot be negative');
             return;
         }
-        if (!itemFormData.batch_number.trim()) {
-            toast.error('Please enter batch number');
+        if (!itemFormData.expiry_date) {
+            toast.error('Expiry date is required');
             return;
         }
 
@@ -587,18 +587,17 @@ const Imports = () => {
                         onChange={(v) => setItemFormData({ ...itemFormData, product_id: v })}
                     />
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Batch Number *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Batch Number</label>
                         <input
                             type="text"
                             value={itemFormData.batch_number}
                             onChange={(e) => setItemFormData({ ...itemFormData, batch_number: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             placeholder="Enter batch number"
-                            required
                         />
                     </div>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date *</label>
                         <input
                             type="date"
                             value={itemFormData.expiry_date}

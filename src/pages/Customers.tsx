@@ -169,7 +169,6 @@ const Customers = () => {
                         label="Name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
                     />
                     <Input
                         label="Phone"

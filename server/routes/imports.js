@@ -76,6 +76,10 @@ router.post("/:id/items", authorization, async (req, res) => {
     const { id } = req.params;
     const { product_id, quantity, unit_price, batch_number, expiry_date } = req.body;
     const total_price = quantity * unit_price;
+
+    if (!expiry_date || !String(expiry_date).trim()) {
+      return res.status(400).json({ message: 'Expiry date is required' });
+    }
     
     // Check if invoice is draft
     const invoice = await pool.query("SELECT status FROM import_invoices WHERE id = $1", [id]);

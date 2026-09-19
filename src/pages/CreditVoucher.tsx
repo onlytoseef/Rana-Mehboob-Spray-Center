@@ -136,7 +136,6 @@ const CreditVoucher = () => {
                             onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
                             style={{ borderColor: '#D1D5DB' }}
-                            required
                         >
                             <option value="">Select Customer</option>
                             {customers.map((c) => (
@@ -166,7 +165,6 @@ const CreditVoucher = () => {
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2"
                             style={{ borderColor: '#D1D5DB' }}
                             min="1"
-                            required
                         />
                         <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
                             This will add to customer's receivable balance

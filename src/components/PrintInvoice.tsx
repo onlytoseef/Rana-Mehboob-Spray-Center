@@ -52,9 +52,9 @@ const PrintInvoice = forwardRef<HTMLDivElement, PrintInvoiceProps>(
 
         const company = companyInfo || {
             name: 'POS SYSTEM',
-            address: 'Main GT Road, Gujranwala, Punjab, Pakistan',
-            phone: '+92 300 1234567',
-            email: 'info@mehboobspraycenter.com',
+            address: 'Your Business Address',
+            phone: 'Your Contact Number',
+            email: 'your@email.com',
         };
 
         const partnerLabel = invoiceType === 'import' ? 'Supplier' : 'Customer';
