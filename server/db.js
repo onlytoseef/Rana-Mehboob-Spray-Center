@@ -1,29 +1,12 @@
 const { Pool } = require('pg');
 require('dotenv').config();
-const { getDatabaseConfig, isConfigured } = require('./config');
 
-// Get database configuration
 const getDbConfig = () => {
-  // First try config file, then fall back to env variables
-  if (isConfigured()) {
-    const dbConfig = getDatabaseConfig();
-    return {
-      user: dbConfig.user,
-      password: dbConfig.password,
-      host: dbConfig.host,
-      port: dbConfig.port,
-      database: dbConfig.name
-    };
+  const connectionString = process.env.DATABASE_URL?.trim();
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is required');
   }
-  
-  // Fallback to environment variables
-  return {
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'spraycenter'
-  };
+  return { connectionString };
 };
 
 // Create pool with config
@@ -40,7 +23,7 @@ const recreatePool = () => {
 const testConnection = async () => {
   try {
     const client = await pool.connect();
-    console.log('✅ Connected to PostgreSQL -', getDbConfig().database);
+    console.log('✅ Connected to PostgreSQL using DATABASE_URL');
     client.release();
     return true;
   } catch (err) {

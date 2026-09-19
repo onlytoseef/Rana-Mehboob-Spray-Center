@@ -5,11 +5,7 @@ const fs = require("fs");
 
 // Backup configuration
 const BACKUP_CONFIG = {
-    host: process.env.DB_HOST || "localhost",
-    port: process.env.DB_PORT || "5432",
-    database: process.env.DB_NAME || "spraycenter",
-    user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD || "postgres",
+    connectionString: process.env.DATABASE_URL,
     pgPath: process.env.PG_PATH || "C:\\Program Files\\PostgreSQL\\17\\bin"
 };
 
@@ -30,16 +26,20 @@ router.get("/", async (req, res) => {
 
         // Build pg_dump command
         const pgDump = path.join(BACKUP_CONFIG.pgPath, "pg_dump.exe");
-        const command = `"${pgDump}" -U ${BACKUP_CONFIG.user} -h ${BACKUP_CONFIG.host} -p ${BACKUP_CONFIG.port} -d ${BACKUP_CONFIG.database} -F p -f "${filepath}"`;
+        if (!BACKUP_CONFIG.connectionString) {
+            return res.status(500).json({
+                success: false,
+                message: "DATABASE_URL is not configured"
+            });
+        }
 
-        // Set password in environment
-        const env = { ...process.env, PGPASSWORD: BACKUP_CONFIG.password };
+        const command = `"${pgDump}" "${BACKUP_CONFIG.connectionString}" -F p -f "${filepath}"`;
 
         console.log("Starting database backup...");
         console.log("Backup file:", filepath);
 
         // Execute backup
-        exec(command, { env }, (error, stdout, stderr) => {
+        exec(command, { env: process.env }, (error, stdout, stderr) => {
             if (error) {
                 console.error("Backup failed:", error.message);
                 return res.status(500).json({

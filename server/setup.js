@@ -1,37 +1,10 @@
-const { Client } = require('pg');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const pool = require('./db');
 
 async function setup() {
-    // Connect to default postgres database first
-    const adminClient = new Client({
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: 'postgres' // connect to default db
-    });
-
     try {
-        await adminClient.connect();
-        console.log('Connected to PostgreSQL...');
-
-        // Check if database exists
-        const dbCheck = await adminClient.query(
-            "SELECT 1 FROM pg_database WHERE datname = 'sparepartsdb'"
-        );
-
-        if (dbCheck.rows.length === 0) {
-            await adminClient.query('CREATE DATABASE sparepartsdb');
-            console.log('✅ Database "sparepartsdb" created!');
-        } else {
-            console.log('Database already exists.');
-        }
-
-        await adminClient.end();
-
-        // Now connect to sparepartsdb
-        const pool = require('./db');
+        console.log('Connected to PostgreSQL using DATABASE_URL...');
 
         // Create users table
         await pool.query(`
