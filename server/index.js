@@ -17,6 +17,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Public health check for uptime monitors and deployment checks
+app.get('/api/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+
+        const uptimeSeconds = Math.floor(process.uptime());
+        res.status(200).json({
+            status: 'ok',
+            message: 'Hello from server',
+            database: {
+                connected: true
+            },
+            uptimeSeconds,
+            uptime: `${uptimeSeconds} seconds`,
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        const uptimeSeconds = Math.floor(process.uptime());
+        res.status(503).json({
+            status: 'error',
+            message: 'Hello from server',
+            database: {
+                connected: false
+            },
+            uptimeSeconds,
+            uptime: `${uptimeSeconds} seconds`,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
