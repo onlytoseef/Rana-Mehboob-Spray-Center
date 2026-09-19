@@ -6,7 +6,9 @@ export default defineConfig({
   plugins: [react()],
   base: '/',
   server: {
+    host: true,        // <-- Yeh lazmi add karein
     port: 5173,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
@@ -15,6 +17,8 @@ export default defineConfig({
     }
   },
   preview: {
-    port: 4173
+    host: true,        // <-- Yeh bhi lazmi add karein
+    port: 5173,        // <-- Ise 5173 kar dein taake Coolify ki settings se match kare
+    strictPort: true
   }
 })
