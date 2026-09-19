@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 </button>
                 <div>
                     <h2 className="text-base sm:text-lg lg:text-xl font-bold" style={{ color: '#0F172A' }}>Welcome Back!</h2>
-                    <p className="text-xs sm:text-sm hidden sm:block" style={{ color: '#64748B' }}>Mehboob Spray Center</p>
+                    <p className="text-xs sm:text-sm hidden sm:block" style={{ color: '#64748B' }}>POS SYSTEM</p>
                 </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">

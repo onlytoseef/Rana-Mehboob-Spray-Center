@@ -88,7 +88,7 @@ const BackupModal = ({
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Create Backup Before Closing?</h3>
-                <p className="text-sm text-gray-500">Mehboob Spray Center</p>
+                <p className="text-sm text-gray-500">POS SYSTEM</p>
               </div>
             </div>
             <p className="text-gray-600 mb-6">

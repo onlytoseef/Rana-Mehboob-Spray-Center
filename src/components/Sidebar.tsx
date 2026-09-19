@@ -155,7 +155,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                 ))}
             </nav>
             <div className="p-3 border-t text-xs text-center" style={{ borderColor: '#1E293B', color: '#94A3B8' }}>
-                © {new Date().getFullYear()} Mehboob Spray Center
+                © {new Date().getFullYear()} POS SYSTEM
             </div>
         </div>
     );

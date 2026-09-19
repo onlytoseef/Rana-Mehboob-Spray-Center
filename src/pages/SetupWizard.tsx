@@ -187,7 +187,7 @@ const SetupWizard: React.FC = () => {
                     <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl mb-4">
                         <FaSprayCan className="text-4xl text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Mehboob Spray Center</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">POS SYSTEM</h1>
                     <p className="text-indigo-300">Database Setup Wizard</p>
                 </div>
 
@@ -497,7 +497,7 @@ const SetupWizard: React.FC = () => {
 
                 {/* Footer */}
                 <p className="text-center text-slate-500 mt-6 text-sm">
-                    Mehboob Spray Center © {new Date().getFullYear()}
+                    POS SYSTEM © {new Date().getFullYear()}
                 </p>
             </div>
         </div>

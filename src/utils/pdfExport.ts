@@ -43,7 +43,7 @@ export const exportToPDF = (options: ExportOptions) => {
     doc.setTextColor(255, 255, 255); // White
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('MEHBOOB SPRAY CENTER', pageWidth / 2, 15, { align: 'center' });
+    doc.text('POS SYSTEM', pageWidth / 2, 15, { align: 'center' });
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -178,7 +178,7 @@ export const exportDashboardPDF = (dashboardData: any) => {
     doc.setTextColor(255, 255, 255); // White
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('MEHBOOB SPRAY CENTER', pageWidth / 2, 15, { align: 'center' });
+    doc.text('POS SYSTEM', pageWidth / 2, 15, { align: 'center' });
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');

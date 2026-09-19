@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FaLock, FaEnvelope, FaSprayCan } from 'react-icons/fa';
+import { FaLock, FaEnvelope, FaSprayCan, FaWhatsapp } from 'react-icons/fa';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -103,7 +103,7 @@ const Login = () => {
                         <h2 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent"
                             style={{ backgroundImage: 'linear-gradient(135deg, #F1F5F9 0%, #94A3B8 100%)' }}
                         >
-                            Mehboob Spray Center
+                            POS SYSTEM
                         </h2>
                         <p className="text-sm mt-2" style={{ color: '#64748B' }}>
                             Sign in to manage your business
@@ -174,10 +174,28 @@ const Login = () => {
                         </button>
                     </form>
 
+                    <div className="mt-5 text-center">
+                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                            Designed and developed by Toseef Rana
+                        </p>
+                        <p className="text-xs mt-2" style={{ color: '#64748B' }}>
+                            Contact us on{' '}
+                            <a
+                                href="https://wa.me/923153942008"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-semibold transition-colors hover:text-green-400"
+                                style={{ color: '#22C55E' }}
+                            >
+                                <FaWhatsapp aria-hidden="true" /> WhatsApp
+                            </a>
+                        </p>
+                    </div>
+
                     {/* Footer */}
                     <div className="mt-8 pt-6 border-t" style={{ borderColor: 'rgba(99, 102, 241, 0.1)' }}>
                         <p className="text-center text-xs" style={{ color: '#475569' }}>
-                            © {new Date().getFullYear()} Mehboob Spray Center
+                            © {new Date().getFullYear()} POS SYSTEM
                         </p>
                         <p className="text-center text-xs mt-1" style={{ color: '#334155' }}>
                             Business Management System

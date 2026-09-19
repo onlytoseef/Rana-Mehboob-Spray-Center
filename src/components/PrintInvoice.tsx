@@ -51,7 +51,7 @@ const PrintInvoice = forwardRef<HTMLDivElement, PrintInvoiceProps>(
         };
 
         const company = companyInfo || {
-            name: 'Mehboob Spray Center',
+            name: 'POS SYSTEM',
             address: 'Main GT Road, Gujranwala, Punjab, Pakistan',
             phone: '+92 300 1234567',
             email: 'info@mehboobspraycenter.com',
