@@ -185,10 +185,10 @@ router.post('/credit-voucher', authorization, async (req, res) => {
             RETURNING *
         `, [customer_id, amount, reference || null, notes || null]);
 
-        // Update customer ledger balance (reduce their debt)
+        // A credit voucher adds credit to the customer's account.
         await client.query(`
             UPDATE customers 
-            SET ledger_balance = ledger_balance - $1
+          SET ledger_balance = ledger_balance + $1
             WHERE id = $2
         `, [amount, customer_id]);
 

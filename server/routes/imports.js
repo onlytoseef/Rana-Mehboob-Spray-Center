@@ -48,7 +48,7 @@ router.get("/:id", authorization, async (req, res) => {
   try {
     const { id } = req.params;
     const invoice = await pool.query(`
-      SELECT i.*, s.name as supplier_name 
+      SELECT i.*, s.name as supplier_name, s.ledger_balance as supplier_balance 
       FROM import_invoices i 
       LEFT JOIN suppliers s ON i.supplier_id = s.id 
       WHERE i.id = $1

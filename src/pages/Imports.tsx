@@ -17,6 +17,7 @@ interface ImportInvoice {
     id: number;
     supplier_id: number;
     supplier_name: string;
+    supplier_balance?: number;
     invoice_no: string;
     type: string;
     price: number;

@@ -319,8 +319,11 @@ router.post("/create-complete", authorization, async (req, res) => {
     res.json({ id: invoiceId, message: "Invoice created and finalized successfully" });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error(err.message);
-    res.status(500).json({ message: "Server Error" });
+    console.error('Sale invoice creation failed:', err.message);
+    res.status(500).json({
+      message: "Sale invoice could not be created",
+      error: process.env.NODE_ENV === 'production' ? 'Database schema or transaction error' : err.message
+    });
   } finally {
     client.release();
   }

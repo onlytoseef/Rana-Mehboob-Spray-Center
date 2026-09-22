@@ -5,7 +5,7 @@ import DataTable from '../components/ui/DataTable';
 import toast from 'react-hot-toast';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { FaBook, FaEye, FaUser, FaTruck } from 'react-icons/fa';
-import { exportToPDF } from '../utils/pdfExport';
+import { exportLedgerPDF } from '../utils/pdfExport';
 
 interface CustomerLedger {
     id: number;
@@ -86,56 +86,32 @@ const GeneralLedger = () => {
     );
 
     const handleExportCustomersPDF = () => {
-        const pdfColumns = [
-            { header: 'Customer', accessor: 'name' },
-            { header: 'Phone', accessor: 'phone' },
-            { header: 'Invoices', accessor: 'total_invoices' },
-            { header: 'Total Purchase', accessor: 'total_purchase' },
-            { header: 'Cash', accessor: 'total_cash' },
-            { header: 'Credit', accessor: 'total_credit' },
-            { header: 'Paid', accessor: 'total_paid' },
-            { header: 'Balance', accessor: 'balance' }
-        ];
-        const data = filteredCustomers.map(c => ({
-            name: c.name,
-            phone: c.phone || '-',
-            total_invoices: c.total_invoices.toString(),
-            total_purchase: `Rs. ${Number(c.total_purchase).toLocaleString()}`,
-            total_cash: `Rs. ${Number(c.total_cash).toLocaleString()}`,
-            total_credit: `Rs. ${Number(c.total_credit).toLocaleString()}`,
-            total_paid: `Rs. ${Number(c.total_paid).toLocaleString()}`,
-            balance: `Rs. ${Number(c.balance).toLocaleString()}`
-        }));
-        exportToPDF({
-            title: 'General Ledger - Customer Summary',
-            columns: pdfColumns,
-            data,
-            filename: `customer-ledger-${new Date().toISOString().split('T')[0]}.pdf`
+        exportLedgerPDF({
+            rows: filteredCustomers.map(customer => ({
+                name: customer.name,
+                phone: customer.phone,
+                totalInvoices: customer.total_invoices,
+                debit: customer.total_purchase,
+                credit: customer.total_paid,
+                balance: customer.balance,
+            })),
+            ledgerType: 'customer',
+            filename: 'customer-ledger'
         });
     };
 
     const handleExportSuppliersPDF = () => {
-        const pdfColumns = [
-            { header: 'Supplier', accessor: 'name' },
-            { header: 'Phone', accessor: 'phone' },
-            { header: 'Invoices', accessor: 'total_invoices' },
-            { header: 'Total Imports', accessor: 'total_imports' },
-            { header: 'Total Paid', accessor: 'total_paid' },
-            { header: 'Balance', accessor: 'balance' }
-        ];
-        const data = filteredSuppliers.map(s => ({
-            name: s.name,
-            phone: s.phone || '-',
-            total_invoices: s.total_invoices.toString(),
-            total_imports: `Rs. ${Number(s.total_imports).toLocaleString()}`,
-            total_paid: `Rs. ${Number(s.total_paid).toLocaleString()}`,
-            balance: `Rs. ${Number(s.balance).toLocaleString()}`
-        }));
-        exportToPDF({
-            title: 'General Ledger - Supplier Summary',
-            columns: pdfColumns,
-            data,
-            filename: `supplier-ledger-${new Date().toISOString().split('T')[0]}.pdf`
+        exportLedgerPDF({
+            rows: filteredSuppliers.map(supplier => ({
+                name: supplier.name,
+                phone: supplier.phone,
+                totalInvoices: supplier.total_invoices,
+                debit: supplier.total_imports,
+                credit: supplier.total_paid,
+                balance: supplier.balance,
+            })),
+            ledgerType: 'supplier',
+            filename: 'supplier-ledger'
         });
     };
 

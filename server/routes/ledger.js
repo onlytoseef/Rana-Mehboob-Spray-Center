@@ -17,9 +17,23 @@ router.get("/customers", authorization, async (req, res) => {
                 COALESCE((
                     SELECT SUM(p.amount) 
                     FROM payments p 
-                    WHERE p.type = 'customer' AND p.partner_id = c.id
+                    WHERE p.type = 'customer' AND p.method = 'cash' AND p.partner_id = c.id
                 ), 0) as total_paid,
-                c.ledger_balance as balance
+                COALESCE((
+                    SELECT SUM(CASE WHEN si2.type = 'credit' THEN si2.total_amount ELSE 0 END)
+                    FROM sales_invoices si2
+                    WHERE si2.customer_id = c.id AND si2.status = 'finalized'
+                ), 0)
+                + COALESCE((
+                    SELECT SUM(CASE WHEN p.method = 'credit_voucher' THEN p.amount ELSE 0 END)
+                    FROM payments p
+                    WHERE p.type = 'customer' AND p.partner_id = c.id
+                ), 0)
+                - COALESCE((
+                    SELECT SUM(CASE WHEN p.method = 'cash' THEN p.amount ELSE 0 END)
+                    FROM payments p
+                    WHERE p.type = 'customer' AND p.partner_id = c.id
+                ), 0) as balance
             FROM customers c
             LEFT JOIN sales_invoices si ON c.id = si.customer_id
             GROUP BY c.id
@@ -89,14 +103,28 @@ router.get("/customer/:id", authorization, async (req, res) => {
                 COALESCE((
                     SELECT SUM(p.amount) 
                     FROM payments p 
-                    WHERE p.type = 'customer' AND p.partner_id = $1
+                    WHERE p.type = 'customer' AND p.method = 'cash' AND p.partner_id = $1
                 ), 0) as total_paid,
                 COALESCE((
                     SELECT SUM(r.total_amount) 
                     FROM returns r 
                     WHERE r.return_type = 'customer' AND r.party_id = $1
                 ), 0) as total_returns,
-                c.ledger_balance as balance
+                COALESCE((
+                    SELECT SUM(CASE WHEN si2.type = 'credit' THEN si2.total_amount ELSE 0 END)
+                    FROM sales_invoices si2
+                    WHERE si2.customer_id = c.id AND si2.status = 'finalized'
+                ), 0)
+                + COALESCE((
+                    SELECT SUM(CASE WHEN p.method = 'credit_voucher' THEN p.amount ELSE 0 END)
+                    FROM payments p
+                    WHERE p.type = 'customer' AND p.partner_id = c.id
+                ), 0)
+                - COALESCE((
+                    SELECT SUM(CASE WHEN p.method = 'cash' THEN p.amount ELSE 0 END)
+                    FROM payments p
+                    WHERE p.type = 'customer' AND p.partner_id = c.id
+                ), 0) as balance
             FROM customers c
             LEFT JOIN sales_invoices si ON c.id = si.customer_id
             WHERE c.id = $1

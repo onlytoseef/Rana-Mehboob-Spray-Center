@@ -131,6 +131,12 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS notes TEXT;
+
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS reference_id INTEGER;
+
             -- Stock Movements Table
             CREATE TABLE IF NOT EXISTS stock_movements (
                 id SERIAL PRIMARY KEY,

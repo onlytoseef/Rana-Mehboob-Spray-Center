@@ -19,6 +19,10 @@ const setupDatabase = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        await client.query(`
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'admin'
+        `);
         console.log('✅ users table created');
 
         // Categories Table
@@ -108,6 +112,26 @@ const setupDatabase = async () => {
                 total_price DECIMAL(12, 2) NOT NULL
             )
         `);
+        const importColumnCheck = await client.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'import_items'
+              AND column_name IN ('invoice_id', 'import_invoice_id')
+        `);
+        const importColumns = importColumnCheck.rows.map(row => row.column_name);
+        if (importColumns.includes('invoice_id') && !importColumns.includes('import_invoice_id')) {
+            await client.query('ALTER TABLE import_items RENAME COLUMN invoice_id TO import_invoice_id');
+        } else if (!importColumns.includes('import_invoice_id')) {
+            await client.query(`
+                ALTER TABLE import_items
+                ADD COLUMN import_invoice_id INTEGER REFERENCES import_invoices(id) ON DELETE CASCADE
+            `);
+        }
+        await client.query(`
+            ALTER TABLE import_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER
+        `);
         console.log('✅ import_items table created');
 
         // Sales Invoices Table
@@ -140,19 +164,60 @@ const setupDatabase = async () => {
         `);
         console.log('✅ sales_items table created');
 
+        // Product batches used by imports and sales
+        console.log('Creating product_batches table...');
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS product_batches (
+                batch_id SERIAL PRIMARY KEY,
+                product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+                batch_number VARCHAR(100) NOT NULL,
+                expiry_date DATE,
+                quantity INTEGER DEFAULT 0,
+                import_id INTEGER REFERENCES import_invoices(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(product_id, batch_number)
+            )
+        `);
+        await client.query(`
+            ALTER TABLE sales_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL
+        `);
+        await client.query(`
+            ALTER TABLE import_items
+            DROP CONSTRAINT IF EXISTS import_items_batch_id_fkey
+        `);
+        await client.query(`
+            ALTER TABLE import_items
+            ADD CONSTRAINT import_items_batch_id_fkey
+            FOREIGN KEY (batch_id) REFERENCES product_batches(batch_id) ON DELETE SET NULL
+        `);
+        console.log('✅ product_batches and sales batch column ready');
+
         // Payments Table
         console.log('Creating payments table...');
         await client.query(`
             CREATE TABLE IF NOT EXISTS payments (
                 id SERIAL PRIMARY KEY,
                 type VARCHAR(20) NOT NULL,
-                partner_type VARCHAR(20) NOT NULL,
+                partner_type VARCHAR(20),
                 partner_id INTEGER NOT NULL,
                 amount DECIMAL(12, 2) NOT NULL,
                 method VARCHAR(50) DEFAULT 'cash',
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        await client.query(`
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS notes TEXT
+        `);
+        await client.query(`
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS reference_id INTEGER
+        `);
+        await client.query(`
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS partner_type VARCHAR(20)
         `);
         console.log('✅ payments table created');
 
@@ -170,6 +235,62 @@ const setupDatabase = async () => {
             )
         `);
         console.log('✅ stock_movements table created');
+
+        // Returns tables
+        console.log('Creating returns tables...');
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS returns (
+                id SERIAL PRIMARY KEY,
+                return_no VARCHAR(20) UNIQUE NOT NULL,
+                return_type VARCHAR(20) NOT NULL CHECK (return_type IN ('customer', 'supplier')),
+                invoice_id INTEGER NOT NULL,
+                party_id INTEGER NOT NULL,
+                total_amount DECIMAL(12, 2) DEFAULT 0,
+                reason VARCHAR(50),
+                refund_type VARCHAR(20) DEFAULT 'credit',
+                notes TEXT,
+                status VARCHAR(20) DEFAULT 'completed',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS return_items (
+                id SERIAL PRIMARY KEY,
+                return_id INTEGER REFERENCES returns(id) ON DELETE CASCADE,
+                product_id INTEGER REFERENCES products(id),
+                quantity INTEGER NOT NULL,
+                unit_price DECIMAL(12, 2) NOT NULL,
+                total_price DECIMAL(12, 2) NOT NULL,
+                batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await client.query(`
+            ALTER TABLE return_items
+            ADD COLUMN IF NOT EXISTS batch_id INTEGER REFERENCES product_batches(batch_id) ON DELETE SET NULL
+        `);
+        console.log('✅ returns and return_items tables created');
+
+        // Common indexes used by ledger, reports, and invoice lookups.
+        const indexes = [
+            'CREATE INDEX IF NOT EXISTS idx_import_items_invoice ON import_items(import_invoice_id)',
+            'CREATE INDEX IF NOT EXISTS idx_import_items_product ON import_items(product_id)',
+            'CREATE INDEX IF NOT EXISTS idx_sales_items_invoice ON sales_items(invoice_id)',
+            'CREATE INDEX IF NOT EXISTS idx_sales_items_product ON sales_items(product_id)',
+            'CREATE INDEX IF NOT EXISTS idx_product_batches_product_id ON product_batches(product_id)',
+            'CREATE INDEX IF NOT EXISTS idx_product_batches_batch_number ON product_batches(batch_number)',
+            'CREATE INDEX IF NOT EXISTS idx_returns_type ON returns(return_type)',
+            'CREATE INDEX IF NOT EXISTS idx_returns_party ON returns(party_id)',
+            'CREATE INDEX IF NOT EXISTS idx_returns_invoice ON returns(invoice_id)',
+            'CREATE INDEX IF NOT EXISTS idx_return_items_return ON return_items(return_id)',
+            'CREATE INDEX IF NOT EXISTS idx_payments_type_partner ON payments(type, partner_id)',
+            'CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id)'
+        ];
+        for (const indexQuery of indexes) {
+            await client.query(indexQuery);
+        }
+        console.log('✅ Database indexes created');
 
         // Create default admin user
         console.log('\nCreating default admin user...');

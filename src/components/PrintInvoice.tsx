@@ -12,6 +12,7 @@ interface InvoiceData {
     invoice_no: string;
     type: string;
     supplier_name?: string;
+    supplier_balance?: number;
     customer_name?: string;
     price?: number;
     total_amount: number;
@@ -30,6 +31,19 @@ interface PrintInvoiceProps {
         email?: string;
     };
 }
+
+const numberToWords = (value: number): string => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    const convert = (number: number): string => {
+        if (number < 20) return ones[number];
+        if (number < 100) return `${tens[Math.floor(number / 10)]}${number % 10 ? ` ${ones[number % 10]}` : ''}`;
+        if (number < 1000) return `${ones[Math.floor(number / 100)]} Hundred${number % 100 ? ` ${convert(number % 100)}` : ''}`;
+        if (number < 1000000) return `${convert(Math.floor(number / 1000))} Thousand${number % 1000 ? ` ${convert(number % 1000)}` : ''}`;
+        return `${convert(Math.floor(number / 1000000))} Million${number % 1000000 ? ` ${convert(number % 1000000)}` : ''}`;
+    };
+    return value === 0 ? 'Zero Rupees' : `${convert(Math.floor(value))} Rupees`;
+};
 
 const PrintInvoice = forwardRef<HTMLDivElement, PrintInvoiceProps>(
     ({ invoice, items, invoiceType, companyInfo }, ref) => {
@@ -59,119 +73,64 @@ const PrintInvoice = forwardRef<HTMLDivElement, PrintInvoiceProps>(
 
         const partnerLabel = invoiceType === 'import' ? 'Supplier' : 'Customer';
         const partnerName = invoiceType === 'import' ? invoice.supplier_name : invoice.customer_name;
+        const partnerBalance = invoiceType === 'import' ? Number(invoice.supplier_balance || 0) : null;
 
         return (
             <div
                 ref={ref}
                 className="print-invoice"
                 style={{
-                    width: '148mm',
-                    minHeight: '210mm',
-                    padding: '10mm',
+                    width: '190mm',
+                    minHeight: '270mm',
+                    padding: '6mm',
                     backgroundColor: '#ffffff',
                     fontFamily: 'Arial, sans-serif',
-                    fontSize: '11px',
-                    color: '#0F172A',
+                    fontSize: '10px',
+                    color: '#000000',
                     boxSizing: 'border-box',
                 }}
             >
-                {/* Header */}
-                <div style={{ borderBottom: '3px solid #6366F1', paddingBottom: '8px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <h1 style={{ 
-                                margin: 0, 
-                                fontSize: '20px', 
-                                fontWeight: 'bold', 
-                                color: '#6366F1',
-                                letterSpacing: '1px'
-                            }}>
-                                {company.name}
-                            </h1>
-                            <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#64748B' }}>
-                                {company.address}
-                            </p>
-                            <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#64748B' }}>
-                                Phone: {company.phone}
-                            </p>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <h2 style={{ 
-                                margin: 0, 
-                                fontSize: '16px', 
-                                fontWeight: 'bold',
-                                color: invoiceType === 'import' ? '#6366F1' : '#8B5CF6',
-                                textTransform: 'uppercase'
-                            }}>
-                                {invoiceType === 'import' ? 'Purchase Invoice' : 'Sales Invoice'}
-                            </h2>
-                            <p style={{ 
-                                margin: '4px 0 0 0', 
-                                fontSize: '12px', 
-                                fontWeight: 'bold',
-                                color: '#0F172A'
-                            }}>
-                                #{invoice.invoice_no}
-                            </p>
+                <div style={{ textAlign: 'center', border: '1px solid #000', padding: '2px', marginBottom: '5px' }}>
+                    <h1 style={{ margin: 0, fontSize: '25px', fontWeight: 'bold', letterSpacing: '1px' }}>{company.name}</h1>
+                    <p style={{ margin: '2px 0', fontSize: '9px' }}>{company.address} | {company.phone} | {company.email}</p>
+                </div>
+                <h2 style={{ margin: '0 0 7px', padding: '3px', border: '1px solid #000', textAlign: 'center', fontSize: '22px', fontWeight: 'bold' }}>
+                    {invoiceType === 'import' ? 'PURCHASE INVOICE' : 'SALES INVOICE'}
+                </h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr 1.5fr', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                    <span style={{ padding: '5px 3px' }}>Date</span><span style={{ background: '#eee', padding: '5px 8px' }}>{formatDate(invoice.created_at)}</span>
+                    <span style={{ padding: '5px 3px', textAlign: 'right' }}>Invoice No.</span><span style={{ background: '#eee', padding: '5px 8px', textAlign: 'right' }}>{invoice.invoice_no}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '85px 1fr', lineHeight: '1.2', fontSize: '12px', fontWeight: 'bold' }}>
+                    <span style={{ padding: '5px 3px', textDecoration: 'underline' }}>Dist. Code</span><span style={{ background: '#eee', padding: '5px 8px' }}>&nbsp;</span>
+                    <span style={{ padding: '5px 3px', textDecoration: 'underline' }}>{partnerLabel}</span><span style={{ background: '#eee', padding: '5px 8px' }}>{partnerName || ''}</span>
+                    <span style={{ padding: '5px 3px', textDecoration: 'underline' }}>Bilty #</span><span style={{ background: '#eee', padding: '5px 8px' }}>&nbsp;</span>
+                </div>
+                {invoiceType === 'import' && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', margin: '14px 0 8px' }}>
+                        <div style={{ width: '48%', border: '3px double #000', display: 'grid', gridTemplateColumns: '1fr 1.2fr', fontSize: '18px', fontWeight: 'bold' }}>
+                            <div style={{ padding: '9px', borderRight: '2px dotted #000', textAlign: 'center' }}>BALANCE</div>
+                            <div style={{ padding: '9px', textAlign: 'center' }}>{formatCurrency(partnerBalance || 0)}</div>
                         </div>
                     </div>
-                </div>
-
-                {/* Invoice Info */}
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    marginBottom: '15px',
-                    padding: '10px',
-                    backgroundColor: '#F9FAFB',
-                    borderRadius: '4px'
-                }}>
-                    <div>
-                        <p style={{ margin: '0 0 4px 0', fontSize: '10px', color: '#6B7280', textTransform: 'uppercase' }}>
-                            {partnerLabel}
-                        </p>
-                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', color: '#242A2A' }}>
-                            {partnerName || 'N/A'}
-                        </p>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                        <p style={{ margin: '0 0 4px 0', fontSize: '10px', color: '#6B7280', textTransform: 'uppercase' }}>
-                            Date
-                        </p>
-                        <p style={{ margin: 0, fontSize: '12px', fontWeight: '500', color: '#242A2A' }}>
-                            {formatDate(invoice.created_at)}
-                        </p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <p style={{ margin: '0 0 4px 0', fontSize: '10px', color: '#6B7280', textTransform: 'uppercase' }}>
-                            Payment Type
-                        </p>
-                        <p style={{ 
-                            margin: 0, 
-                            fontSize: '12px', 
-                            fontWeight: 'bold',
-                            color: invoice.type === 'cash' ? '#047857' : '#DC2626',
-                            textTransform: 'uppercase'
-                        }}>
-                            {invoice.type === 'cash' ? 'CASH' : 'CREDIT'}
-                        </p>
-                    </div>
-                </div>
+                )}
 
                 {/* Items Table */}
                 <table style={{ 
                     width: '100%', 
                     borderCollapse: 'collapse', 
-                    marginBottom: '15px',
-                    fontSize: '10px'
+                    margin: '8px 0 0',
+                    fontSize: '10px',
+                    border: '2px solid #000'
                 }}>
-                    <thead>
+                    <thead style={{ background: '#eee' }}>
                         <tr style={{ backgroundColor: '#242A2A', color: '#FFFFFF' }}>
-                            <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>#</th>
-                            <th style={{ padding: '8px 6px', textAlign: 'left', fontWeight: '600' }}>Product</th>
-                            <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: '600' }}>Qty</th>
-                            <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Unit Price</th>
-                            <th style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '600' }}>Total</th>
+                            <th style={{ padding: '5px', border: '1px solid #000', width: '7%' }}>Sr.<br />No.</th>
+                            <th style={{ padding: '5px', border: '1px solid #000', width: '10%' }}>Prod.<br />Code.</th>
+                            <th style={{ padding: '5px', border: '1px solid #000' }}>Product Name</th>
+                            <th style={{ padding: '5px', border: '1px solid #000', width: '9%' }}>Qty.</th>
+                            <th style={{ padding: '5px', border: '1px solid #000', width: '14%' }}>Rate</th>
+                            <th style={{ padding: '5px', border: '1px solid #000', width: '24%' }}>Total<br />Value</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -179,95 +138,40 @@ const PrintInvoice = forwardRef<HTMLDivElement, PrintInvoiceProps>(
                             <tr 
                                 key={item.id} 
                                 style={{ 
-                                    borderBottom: '1px solid #E5E7EB',
-                                    backgroundColor: index % 2 === 0 ? '#FFFFFF' : '#F9FAFB'
+                                    height: '27px'
                                 }}
                             >
-                                <td style={{ padding: '8px 6px', color: '#6B7280' }}>{index + 1}</td>
-                                <td style={{ padding: '8px 6px', fontWeight: '500' }}>{item.product_name}</td>
-                                <td style={{ padding: '8px 6px', textAlign: 'center' }}>{item.quantity}</td>
-                                <td style={{ padding: '8px 6px', textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
-                                <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: '500' }}>{formatCurrency(item.total_price)}</td>
+                                <td style={{ padding: '5px', border: '1px solid #000', textAlign: 'center' }}>{index + 1}</td>
+                                <td style={{ padding: '5px', border: '1px solid #000', textAlign: 'center' }}>&nbsp;</td>
+                                <td style={{ padding: '5px', border: '1px solid #000' }}>{item.product_name}</td>
+                                <td style={{ padding: '5px', border: '1px solid #000', textAlign: 'center' }}>{item.quantity}</td>
+                                <td style={{ padding: '5px', border: '1px solid #000', textAlign: 'right' }}>{formatCurrency(item.unit_price)}</td>
+                                <td style={{ padding: '5px', border: '1px solid #000', textAlign: 'right' }}>{formatCurrency(item.total_price)}</td>
                             </tr>
                         ))}
                         {/* Empty rows to fill space if needed */}
                         {items.length < 5 && [...Array(5 - items.length)].map((_, i) => (
-                            <tr key={`empty-${i}`} style={{ borderBottom: '1px solid #E5E7EB' }}>
-                                <td style={{ padding: '8px 6px' }}>&nbsp;</td>
-                                <td style={{ padding: '8px 6px' }}></td>
-                                <td style={{ padding: '8px 6px' }}></td>
-                                <td style={{ padding: '8px 6px' }}></td>
-                                <td style={{ padding: '8px 6px' }}></td>
+                            <tr key={`empty-${i}`} style={{ height: '27px' }}>
+                                <td style={{ border: '1px solid #000' }}>&nbsp;</td><td style={{ border: '1px solid #000' }}></td><td style={{ border: '1px solid #000' }}></td><td style={{ border: '1px solid #000' }}></td><td style={{ border: '1px solid #000' }}></td><td style={{ border: '1px solid #000' }}></td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
 
-                {/* Totals */}
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'flex-end',
-                    marginBottom: '20px'
-                }}>
-                    <div style={{ width: '50%' }}>
-                        <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            padding: '6px 10px',
-                            borderBottom: '1px solid #E5E7EB'
-                        }}>
-                            <span style={{ color: '#6B7280' }}>Subtotal:</span>
-                            <span style={{ fontWeight: '500' }}>{formatCurrency(invoice.total_amount)}</span>
-                        </div>
-                        {invoice.price && invoice.price > 0 && (
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                padding: '6px 10px',
-                                borderBottom: '1px solid #E5E7EB'
-                            }}>
-                                <span style={{ color: '#6B7280' }}>Additional Charges:</span>
-                                <span style={{ fontWeight: '500' }}>{formatCurrency(invoice.price)}</span>
-                            </div>
-                        )}
-                        <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            padding: '10px',
-                            backgroundColor: '#242A2A',
-                            color: '#FFFFFF',
-                            fontWeight: 'bold',
-                            fontSize: '13px'
-                        }}>
-                            <span>GRAND TOTAL:</span>
-                            <span>{formatCurrency(invoice.total_amount + (invoice.price || 0))}</span>
-                        </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '7px' }}>
+                    <div style={{ fontWeight: 'bold', textDecoration: 'underline', padding: '8px 3px' }}>{numberToWords(invoice.total_amount)}</div>
+                    <div style={{ width: '42%', border: '2px solid #000', display: 'grid', gridTemplateColumns: '1fr 1fr', fontSize: '14px', fontWeight: 'bold' }}>
+                        <div style={{ padding: '10px', borderRight: '2px solid #000' }}>TOTAL</div><div style={{ padding: '10px', textAlign: 'right' }}>{formatCurrency(invoice.total_amount)}</div>
                     </div>
                 </div>
 
                 {/* Footer */}
                 <div style={{ 
-                    borderTop: '1px solid #E5E7EB', 
-                    paddingTop: '15px',
+                    paddingTop: '30px',
                     marginTop: 'auto'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px' }}>
-                        <div style={{ textAlign: 'center', flex: 1 }}>
-                            <div style={{ borderTop: '1px solid #242A2A', width: '80%', margin: '0 auto', paddingTop: '5px' }}>
-                                <p style={{ margin: 0, fontSize: '10px', color: '#6B7280' }}>Authorized Signature</p>
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'center', flex: 1 }}>
-                            <div style={{ borderTop: '1px solid #242A2A', width: '80%', margin: '0 auto', paddingTop: '5px' }}>
-                                <p style={{ margin: 0, fontSize: '10px', color: '#6B7280' }}>Receiver Signature</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style={{ textAlign: 'center', fontSize: '9px', color: '#9CA3AF' }}>
-                        <p style={{ margin: '0 0 2px 0' }}>Thank you for your business!</p>
-                        <p style={{ margin: 0 }}>This is a computer-generated invoice.</p>
-                    </div>
+                    <div style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '11px', letterSpacing: '2px' }}>E &amp; O E</div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '35px' }}><div style={{ width: '35%', borderTop: '1px solid #000', paddingTop: '5px', textAlign: 'center', fontSize: '10px' }}>Authorized Signature</div></div>
                 </div>
             </div>
         );

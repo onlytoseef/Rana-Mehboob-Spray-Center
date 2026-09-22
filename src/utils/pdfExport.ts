@@ -16,6 +16,104 @@ interface ExportOptions {
     showTotal?: { column: string; label: string };
 }
 
+interface LedgerExportRow {
+    name: string;
+    phone?: string;
+    totalInvoices: number;
+    debit: number;
+    credit: number;
+    balance: number;
+}
+
+export const exportLedgerPDF = (options: {
+    rows: LedgerExportRow[];
+    ledgerType: 'customer' | 'supplier';
+    filename: string;
+}) => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    const rows = options.rows;
+    const totalBalance = rows.reduce((sum, row) => sum + Number(row.balance || 0), 0);
+    const totalDebit = rows.reduce((sum, row) => sum + Number(row.debit || 0), 0);
+    const totalCredit = rows.reduce((sum, row) => sum + Number(row.credit || 0), 0);
+    const money = (value: number) => Number(value || 0).toLocaleString('en-PK');
+    const title = options.ledgerType === 'supplier' ? 'Distributor Ledger' : 'Customer Ledger';
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text('POS SYSTEM', margin, 14);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 16, margin + 52, 16);
+
+    doc.setFontSize(15);
+    doc.text(title, margin, 29);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.text(options.ledgerType === 'supplier' ? 'Distributor Name' : 'Customer Name', margin, 41);
+
+    if (rows.length === 1) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(17);
+        doc.text(rows[0].name, margin + 45, 41);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(14);
+        doc.text(rows[0].phone || '', margin + 45, 51);
+    } else {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.text(`${rows.length} accounts`, margin + 45, 41);
+    }
+
+    const balanceX = pageWidth - 85;
+    doc.setLineWidth(0.8);
+    doc.rect(balanceX, 35, 70, 17);
+    doc.rect(balanceX + 1.5, 36.5, 67, 14);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('BALANCE', balanceX + 20, 45.5, { align: 'center' });
+    doc.line(balanceX + 35, 36.5, balanceX + 35, 50.5);
+    doc.setFontSize(17);
+    doc.text(money(totalBalance), balanceX + 52, 45.5, { align: 'center' });
+
+    const tableRows = rows.map((row, index) => [
+        String(index + 1),
+        new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        `${row.totalInvoices} invoice${row.totalInvoices === 1 ? '' : 's'} - ${row.name}`,
+        '-',
+        money(row.debit),
+        money(row.credit),
+        money(row.balance),
+    ]);
+
+    autoTable(doc, {
+        head: [['TXN #', 'DATE', 'DESCRIPTION', 'TR No.\nJV No.', 'DEBIT ( + )', 'CREDIT ( - )', 'BALANCE']],
+        body: tableRows,
+        startY: 59,
+        margin: { left: margin, right: margin },
+        theme: 'grid',
+        styles: { fontSize: 9, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.25, cellPadding: 2.5 },
+        headStyles: { fillColor: [218, 218, 218], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
+        columnStyles: { 0: { cellWidth: 17, halign: 'center' }, 1: { cellWidth: 30, halign: 'center' }, 2: { cellWidth: 105 }, 3: { cellWidth: 25, halign: 'center' }, 4: { cellWidth: 32, halign: 'right' }, 5: { cellWidth: 32, halign: 'right' }, 6: { cellWidth: 32, halign: 'right', fontStyle: 'bold' } },
+        didParseCell: (hookData) => {
+            if (hookData.section === 'body' && hookData.row.index === 0) {
+                hookData.cell.styles.fillColor = [180, 178, 89];
+                hookData.cell.styles.fontStyle = hookData.column.index === 6 ? 'bold' : 'normal';
+            }
+        },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY || 100;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(`Total Debit: ${money(totalDebit)}    Total Credit: ${money(totalCredit)}    Closing Balance: ${money(totalBalance)}`, margin, finalY + 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('This is a computer-generated ledger.', pageWidth / 2, 200, { align: 'center' });
+    doc.save(`${options.filename}_${new Date().toISOString().split('T')[0]}.pdf`);
+};
+
 export const exportToPDF = (options: ExportOptions) => {
     const {
         title,

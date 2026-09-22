@@ -144,6 +144,16 @@ async function setup() {
         `);
 
         await pool.query(`
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS notes TEXT
+        `);
+
+        await pool.query(`
+            ALTER TABLE payments
+            ADD COLUMN IF NOT EXISTS reference_id INTEGER
+        `);
+
+        await pool.query(`
             CREATE TABLE IF NOT EXISTS stock_movements (
                 id SERIAL PRIMARY KEY,
                 product_id INTEGER REFERENCES products(id),
